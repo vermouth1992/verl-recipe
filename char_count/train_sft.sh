@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-ENTRYPOINT=${ENTRYPOINT:-"-m verl.trainer.sft_trainer"}
+mode=${mode:-spmd}
+
+if [ "$mode" = "spmd" ]; then
+  ENTRYPOINT=${ENTRYPOINT:-"-m verl.trainer.sft_trainer"}
+  COMMAND="torchrun --standalone --nnodes=${NNODES:-1} --nproc-per-node=${NUM_TRAINERS:-1} ${ENTRYPOINT}"
+else
+  ENTRYPOINT=${ENTRYPOINT:-"-m verl.trainer.sft_trainer_ray"}
+  COMMAND="python ${ENTRYPOINT} trainer.nnodes=${NNODES:-1} trainer.n_gpus_per_node=${NUM_TRAINERS:-1}"
+fi
 
 TRAIN_FILES=${TRAIN_FILES:-$HOME/data/char_count/sft/train.parquet}
 TEST_FILES=${TEST_FILES:-$HOME/data/char_count/sft/test.parquet}
@@ -71,8 +79,7 @@ fi
 CKPT_HOME=${CKPT_HOME:-$HOME/experiments/char_count/models/sft/$backend}
 mkdir -p "${CKPT_HOME}"
 
-torchrun --standalone --nnodes=1 --nproc-per-node=${NUM_TRAINERS:-1} \
-    ${ENTRYPOINT} \
+$COMMAND \
     data.train_files="${TRAIN_FILES}" \
     data.train_batch_size=64 \
     data.val_files="${TEST_FILES}" \
@@ -87,7 +94,7 @@ torchrun --standalone --nnodes=1 --nproc-per-node=${NUM_TRAINERS:-1} \
     ${ENGINE_CONFIG} \
     trainer.test_freq=-1 \
     trainer.save_freq=70 \
-    trainer.logger=['console'] \
+    trainer.logger=['console','file'] \
     trainer.project_name="${project_name}" \
     trainer.experiment_name="${exp_name}" \
     trainer.total_epochs=1 \
