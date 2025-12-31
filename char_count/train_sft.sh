@@ -101,4 +101,11 @@ $COMMAND \
     trainer.default_local_dir="${CKPT_HOME}" \
     trainer.resume_mode=${RESUME_MODE} \
     trainer.max_ckpt_to_keep=5 \
-    checkpoint.save_contents=[model,optimizer,extra]
+    checkpoint.save_contents=[model,optimizer,extra] \
+    profiler.enable=True \
+    profiler.all_ranks=True \
+    profiler.save_path=outputs/profiler \
+    profiler.tool=torch \
+    profiler.tool_config.torch.step_start=0 \
+    profiler.tool_config.torch.step_end=1 \
+    trainer.profile_interval=[3,3]
